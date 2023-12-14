@@ -9,11 +9,11 @@ void _pint(stack_t **stack, unsigned int line_number)
 {
 	if (*stack == NULL)
 	{
-		fprintf(stderr, "L<line_number>: can't pint, stack empty\n");
-		fclose(bus.file);
-		free(bus.content);
+		fprintf(stderr, "L%d: can't pint, stack empty\n", line_number);
+		fclose(glob_t.file);
+		free(glob_t.buffer);
 		free_stack(*stack);
 		exit(EXIT_FAILURE);
 	}
-	printf("%d\n", (*head)->n);
+	printf("%d\n", (*stack)->n);
 }

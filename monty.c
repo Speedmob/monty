@@ -1,63 +1,32 @@
 #include "monty.h"
+global_t glob_t;
 /**
  * main - Entry point
- * argc: num of args
- * argv: args vector
+ * @argc: num of args
+ * @argv: args vector
  *
  * Return: Always 0 (Success)
 */
 int main(int argc, char *argv[])
 {
-	char *buffer = NULL, *token = NULL, *delim = "\n ";
-	ins_func ins;
-	int len = 0, i = 0, num = 0, iter = 0, linenum = 1;
-	size_t c = 0;
-	FILE *open = NULL;
+	stack_t *stack = NULL;
 
+	glob_t.exit_condition = 0;
 	if (argc != 2)
 	{
-		printf("USAGE: monty file\n");
+		fprintf(stderr, "USAGE: monty file\n");
 		exit(EXIT_FAILURE);
 	}
-	open = fopen(argv[1], "r");
-	if (!open)
+	glob_t.file = fopen(argv[1], "r");
+	if (!glob_t.file)
 	{
-		printf("Error: Can't open file %s\n", argv[1]);
+		fprintf(stderr, "Error: Can't open file %s\n", argv[1]);
 		exit(EXIT_FAILURE);
 	}
-	while((len = getline(&buffer, &c, open)) != EOF)
-	{
-		/*probably can move this part to a separate function
-		 * to reduce space
-		 * also stack isn't initialized
-		 * and a free function for doubly LL is needed
-		 * after (to not leak/lose memory)*/
-		token = strtok(buffer, delim);
-		ins = get_instruct(token);
-		if (!ins)
-		{
-
-		}
-		if (strcmp(token, "push") == 0)
-		{
-			token = strtok(NULL, delim);
-			for (iter = 0; token[iter] != '\0'; iter++)
-			{
-				if (!isdigit(token[iter]))
-				{
-				printf("L%d: usage: push integer\n", linenum);
-				exit(EXIT_FAILURE); }}
-			num = atoi(token);
-			printf("%d\n", num);
-			/*ins func call with int*/
-			linenum++;
-			continue; }
-		/*ins func call without an int*/
-	}
-	free(buffer);
-	i = fclose(open);
-	if (i == -1)
-		exit(-1);
+	mont_epter(&stack);
+	free_stack(stack);
+	if (glob_t.exit_condition)
+		exit(EXIT_FAILURE);
 	return (0);
 }
 /**
@@ -66,7 +35,7 @@ int main(int argc, char *argv[])
  *
  * Return: function in line
 */
-/*ins_func get_instruct(char *buffer)
+ins_func get_instruct(char *buffer)
 {
 	int i = 0;
 		instruction_t ins[] = {
@@ -77,17 +46,60 @@ int main(int argc, char *argv[])
 		{"swap", _swap},
 		{"add", _add},
 		{"nop", _nop},
+		{"sub", _sub},
+		{"div", _div},
+		{"mul", _mul},
+		{"mod", _mod},
+		{"pchar", _pchar},
+		{"pstr", _pstr},
 		{NULL, NULL}
 	};
-
-
 	while (ins[i].f && strcmp(ins[i].opcode, buffer) != 0)
-			i++;
+		i++;
 	return (ins[i].f);
-}*/
-ins_func get_instruct(char *buffer)
+}
+/**
+ * mont_epter - reads .m file and interpets it
+ * @stack: stack
+ */
+void mont_epter(stack_t **stack)
 {
-	/*above code doesn't work because functions aren't initialized/coded*/
-	printf("%s \n", buffer);
-	return (NULL);
+	char *token = NULL, *delim = "\r\t\n ";
+	ins_func ins;
+	int len = 0, i = 0, iter = 0;
+	unsigned int linenum = 1;
+	size_t c = 0;
+
+	while ((len = getline(&glob_t.buffer, &c, glob_t.file)) != EOF)
+	{
+		token = strtok(glob_t.buffer, delim);
+		if (token == NULL || token[0] == '#')
+		{
+			linenum++;
+			continue; }
+		ins = get_instruct(token);
+		if (!ins)
+		{
+			fprintf(stderr, "L%d: unknown instruction %s\n", linenum, token);
+			glob_t.exit_condition = -1;
+			break; }
+		if (strcmp(token, "push") == 0)
+		{
+			token = strtok(NULL, delim);
+			for (iter = 0; token[iter] != '\0'; iter++)
+			{
+				if (!isdigit(token[iter]) && token[0] != '-')
+				{
+				printf("L%d: usage: push integer\n", linenum);
+				glob_t.exit_condition = -1;
+				break; }}
+			if (glob_t.exit_condition)
+				break;
+			glob_t.num = atoi(token); }
+		ins(stack, linenum);
+		linenum++; }
+	free(glob_t.buffer);
+	i = fclose(glob_t.file);
+	if (i == -1)
+		exit(-1);
 }
